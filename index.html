@@ -106,6 +106,139 @@
       border-color: #1f4e79;
     }
 
+    .numbers-page {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 22px;
+      width: 100%;
+    }
+    .numbers-title-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      gap: 20px;
+      padding-bottom: 10px;
+      border-bottom: 4px solid #244668;
+    }
+    .numbers-title-row h2 {
+      margin: 0;
+      color: #244668;
+      font-size: 44px;
+      font-weight: 950;
+    }
+    .numbers-title-row p {
+      margin: 8px 0 0;
+      color: #64748b;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .copy-all-btn { background: #0f766e; }
+    .numbers-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .number-card {
+      position: relative;
+      border: 1px solid #d8dee8;
+      border-radius: 18px;
+      background: #fff;
+      padding: 18px 18px 16px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, .08);
+      min-height: 142px;
+    }
+    .number-card.wide { grid-column: span 2; }
+    .number-card.full { grid-column: 1 / -1; }
+    .number-card .label {
+      color: #475569;
+      font-size: 19px;
+      font-weight: 900;
+      line-height: 1.25;
+    }
+    .number-card .value {
+      margin-top: 8px;
+      color: #0f172a;
+      font-size: 48px;
+      line-height: 1;
+      font-weight: 950;
+      letter-spacing: -.5px;
+    }
+    .number-card .value small {
+      color: #334155;
+      font-size: 24px;
+      font-weight: 900;
+      margin-left: 4px;
+    }
+    .number-card .formula {
+      margin-top: 9px;
+      color: #64748b;
+      font-size: 16px;
+      font-weight: 750;
+      line-height: 1.35;
+    }
+    .number-card .copy-one {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      padding: 6px 9px;
+      font-size: 12px;
+      border-radius: 8px;
+      background: #e2e8f0;
+      color: #334155;
+      box-shadow: none;
+    }
+    .section-band {
+      margin: 6px 0 -4px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      color: #fff;
+      background: #244668;
+      font-size: 24px;
+      font-weight: 950;
+    }
+    .brief-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow: hidden;
+      border-radius: 14px;
+      border: 1px solid #d8dee8;
+      background: #fff;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, .07);
+    }
+    .brief-table th, .brief-table td {
+      border-bottom: 1px solid #e5e7eb;
+      border-right: 1px solid #e5e7eb;
+      padding: 10px 12px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .brief-table th {
+      color: #fff;
+      background: #4f84bf;
+      font-weight: 950;
+    }
+    .brief-table td:first-child {
+      color: #244668;
+      background: #f8fafc;
+      font-weight: 950;
+    }
+    .brief-table tr:last-child td { border-bottom: 0; }
+    .brief-table th:last-child, .brief-table td:last-child { border-right: 0; }
+    .manual-note {
+      padding: 12px 14px;
+      border-left: 6px solid #f59e0b;
+      border-radius: 12px;
+      background: #fff7ed;
+      color: #7c2d12;
+      font-size: 17px;
+      line-height: 1.55;
+      font-weight: 750;
+    }
+
     details.settings {
       margin: 12px 18px 0;
       border: 1px solid #d8dee8;
@@ -428,6 +561,7 @@
       <label>日期</label>
       <input id="reportDate" type="text" value="2026.5.29" />
       <button class="mode-pill active" data-mode="all">全臺鄉鎮</button>
+      <button class="mode-pill" data-mode="brief">簡報數字</button>
       <button class="mode-pill" data-mode="priority">優先推動地區</button>
       <button class="mode-pill" data-mode="indigenous">原民地區</button>
     </div>
@@ -455,6 +589,13 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
           <input id="filteredExecOverride" type="text" placeholder="篩選模式：執行中提案件數覆寫" />
           <input id="filteredCounselOverride" type="text" placeholder="篩選模式：輔導中提案件數覆寫" />
+        </div>
+        <div class="hint" style="margin-top:10px;">簡報數字頁可搭配以下手動欄位，處理不一定能從鄉鎮表反推的數字，例如會議場次、多元徵案報件數與既有政策工具件數。</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px;">
+          <input id="meetingCountInput" type="text" value="56" placeholder="工作會議場次" />
+          <input id="reportedPlanInput" type="text" value="272" placeholder="提報計畫件數" />
+          <input id="multiReportedInput" type="text" value="115" placeholder="多元徵案提報" />
+          <input id="multiPassedInput" type="text" value="94" placeholder="多元徵案通過" />
         </div>
       </div>
     </div>
@@ -1093,9 +1234,163 @@ function getDisplayProposalCount(status, baseSet) {
   return filtered || '—';
 }
 
+function getNumberInput(id, fallback = 0) {
+  const raw = document.getElementById(id)?.value?.trim();
+  if (!raw) return fallback;
+  const n = Number(raw.replace(/[^0-9.]/g, ''));
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function regionOfCounty(county) {
+  if (['基隆市','臺北市','新北市','桃園市','新竹市','新竹縣','宜蘭縣','金門縣','連江縣'].includes(county)) return '北區';
+  if (['苗栗縣','臺中市','彰化縣','南投縣','雲林縣'].includes(county)) return '中區';
+  if (['嘉義市','嘉義縣','臺南市','高雄市','屏東縣','澎湖縣'].includes(county)) return '南區';
+  if (['花蓮縣','臺東縣'].includes(county)) return '東區';
+  return '其他';
+}
+
+function countByRegion(set) {
+  const out = { '北區': 0, '中區': 0, '南區': 0, '東區': 0 };
+  for (const key of set) {
+    const { county } = splitKey(key);
+    const region = regionOfCounty(county);
+    if (out[region] !== undefined) out[region]++;
+  }
+  return out;
+}
+
+function countProposalRowsByCounty(status) {
+  const out = new Map();
+  for (const unit of parsed?.proposalUnits?.[status] || []) {
+    const counties = new Set([...unit.pairs].map(k => splitKey(k).county));
+    for (const county of counties) out.set(county, (out.get(county) || 0) + 1);
+  }
+  return out;
+}
+
+function copyText(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => alert('已複製數字文字。')).catch(() => fallbackCopyText(text));
+  } else {
+    fallbackCopyText(text);
+  }
+}
+function fallbackCopyText(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  ta.remove();
+  alert('已複製數字文字。');
+}
+function escapeHtmlAttr(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+function numberCard(label, value, unit = '', formula = '', copyValue = null, wide = false) {
+  const text = copyValue ?? `${value}${unit}`;
+  return `<div class="number-card ${wide ? 'wide' : ''}"><button class="copy-one" data-copy="${escapeHtmlAttr(text)}">複製</button><div class="label">${label}</div><div class="value">${value}<small>${unit}</small></div>${formula ? `<div class="formula">${formula}</div>` : ''}</div>`;
+}
+function renderBriefNumbers() {
+  const lists = getLists();
+  const exec = parsed.executing;
+  const counsel = parsed.counseling;
+  const covered = union(exec, counsel);
+  const overlap = inter(exec, counsel);
+  const noProposal = diff(ALL_PAIR_SET, covered);
+  const priorityCovered = inter(covered, lists.priority);
+  const priorityMissing = diff(lists.priority, priorityCovered);
+  const indigenousCovered = inter(covered, lists.indigenous.all);
+  const indigenousMountain = new Set([...lists.indigenous.all].filter(k => lists.indigenous.type.get(k) === 'mountain'));
+  const indigenousPlain = new Set([...lists.indigenous.all].filter(k => lists.indigenous.type.get(k) === 'plain'));
+  const indigenousMountainCovered = inter(covered, indigenousMountain);
+  const indigenousPlainCovered = inter(covered, indigenousPlain);
+  const execProposalCount = parsed.proposalCounts.executing || countProposalUnits('executing', ALL_PAIR_SET);
+  const counselProposalCount = parsed.proposalCounts.counseling || countProposalUnits('counseling', ALL_PAIR_SET);
+  const meetingCount = getNumberInput('meetingCountInput', 56);
+  const reportedPlan = getNumberInput('reportedPlanInput', execProposalCount + counselProposalCount);
+  const multiReported = getNumberInput('multiReportedInput', 0);
+  const multiPassed = getNumberInput('multiPassedInput', 0);
+  const priorityRegionTotal = countByRegion(lists.priority);
+  const priorityRegionCovered = countByRegion(priorityCovered);
+  const execByCounty = countProposalRowsByCounty('executing');
+  const countyRows = [...execByCounty.entries()].sort((a,b) => COUNTY_ORDER.indexOf(a[0]) - COUNTY_ORDER.indexOf(b[0])).map(([county, count]) => `<tr><td>${county}</td><td>${count}</td></tr>`).join('');
+  const briefText = [
+    `地方創生計畫推動現況｜${document.getElementById('reportDate').value || ''}`,
+    `執行中：${execProposalCount}案；輔導中：${counselProposalCount}案；推動中合計：${execProposalCount + counselProposalCount}案`,
+    `執行中涵蓋：${exec.size}鄉鎮市區；輔導中涵蓋：${counsel.size}鄉鎮市區；重疊：${overlap.size}處；推動中不重複涵蓋：${covered.size}/${ALL_PAIR_SET.size}，${pct(covered.size, ALL_PAIR_SET.size)}`,
+    `未提案：${noProposal.size}鄉鎮市區`,
+    `優先推動地區：${priorityCovered.size}/${lists.priority.size}，${pct(priorityCovered.size, lists.priority.size)}；尚未涵蓋：${priorityMissing.size}處`,
+    `原民地區：${indigenousCovered.size}/${lists.indigenous.all.size}，${pct(indigenousCovered.size, lists.indigenous.all.size)}；山地：${indigenousMountainCovered.size}/${indigenousMountain.size}；平地：${indigenousPlainCovered.size}/${indigenousPlain.size}`,
+    `會報工作會議：${meetingCount}場；地方政府提報：${reportedPlan}件；通過：${execProposalCount}件；多元徵案提報：${multiReported}件；多元徵案通過：${multiPassed}件`
+  ].join(String.fromCharCode(10));
+  const content = document.getElementById('content');
+  content.innerHTML = `<div class="numbers-page">
+    <div class="numbers-title-row"><div><h2>簡報數字更新總表</h2><p>可直接複製至既有簡報頁面；灰色公式列保留分母與計算邏輯，便於核對。</p></div><button class="copy-all-btn" onclick="copyText(\`${briefText.replace(/`/g, '\`')}\`)">複製全部數字</button></div>
+    <div class="section-band">① 地方創生計畫推動現況</div>
+    <div class="numbers-grid">
+      ${numberCard('執行中案件數', execProposalCount, '案', '取自表頭或提案切分結果')}
+      ${numberCard('輔導中案件數', counselProposalCount, '案', '取自表頭或提案切分結果')}
+      ${numberCard('推動中合計案件數', execProposalCount + counselProposalCount, '案', '執行中＋輔導中')}
+      ${numberCard('未提案鄉鎮市區', noProposal.size, '處', `${ALL_PAIR_SET.size}－${covered.size}`)}
+      ${numberCard('執行中涵蓋鄉鎮', exec.size, '處', '不重複鄉鎮市區')}
+      ${numberCard('輔導中涵蓋鄉鎮', counsel.size, '處', '不重複鄉鎮市區')}
+      ${numberCard('推動中不重複涵蓋', covered.size, '處', `${covered.size}/${ALL_PAIR_SET.size}＝${pct(covered.size, ALL_PAIR_SET.size)}`)}
+      ${numberCard('執行／輔導重疊鄉鎮', overlap.size, '處', '同時有執行中及輔導中案件')}
+    </div>
+    <div class="section-band">② 地方創生會報工作會議頁面</div>
+    <div class="numbers-grid">
+      ${numberCard('工作會議場次', meetingCount, '場', '手動欄位，可於進階設定修改')}
+      ${numberCard('地方政府提報計畫', reportedPlan, '件', '手動欄位，可於進階設定修改')}
+      ${numberCard('通過地方創生計畫', execProposalCount, '件', '對應執行中案件數')}
+      ${numberCard('通過計畫涵蓋鄉鎮', exec.size, '處', '對應執行中涵蓋鄉鎮')}
+      ${numberCard('多元徵案提報', multiReported, '件', '手動欄位，可於進階設定修改')}
+      ${numberCard('多元徵案通過', multiPassed, '件', '手動欄位，可於進階設定修改')}
+    </div>
+    <table class="brief-table"><thead><tr><th colspan="4">執行中案件數：縣市別統計，可用於會報工作會議地圖頁下方表格</th></tr><tr><th>縣市</th><th>通過提案數</th><th>縣市</th><th>通過提案數</th></tr></thead><tbody>${buildTwoColumnCountyTable(execByCounty)}</tbody></table>
+    <div class="section-band">③ 優先推動地區頁面</div>
+    <div class="numbers-grid">
+      ${numberCard('優先推動地區已涵蓋', priorityCovered.size, '處', `${priorityCovered.size}/${lists.priority.size}＝${pct(priorityCovered.size, lists.priority.size)}`)}
+      ${numberCard('優先推動地區尚未涵蓋', priorityMissing.size, '處', `${lists.priority.size}－${priorityCovered.size}`)}
+      ${numberCard('優先推動地區涵蓋率', pct(priorityCovered.size, lists.priority.size), '', `${priorityCovered.size}/${lists.priority.size}`)}
+      ${numberCard('一般地區占比', pct(ALL_PAIR_SET.size - lists.priority.size, ALL_PAIR_SET.size, 0), '', `${ALL_PAIR_SET.size - lists.priority.size}/${ALL_PAIR_SET.size}`)}
+    </div>
+    <table class="brief-table"><thead><tr><th>分區</th><th>已提案優先地區</th><th>優先地區總數</th><th>涵蓋率</th><th>尚未涵蓋</th></tr></thead><tbody>${['北區','中區','南區','東區'].map(r => `<tr><td>${r}</td><td>${priorityRegionCovered[r]}</td><td>${priorityRegionTotal[r]}</td><td>${pct(priorityRegionCovered[r], priorityRegionTotal[r])}</td><td>${priorityRegionTotal[r] - priorityRegionCovered[r]}</td></tr>`).join('')}</tbody></table>
+    <div class="section-band">④ 原民地區頁面</div>
+    <div class="numbers-grid">
+      ${numberCard('原民地區已涵蓋', indigenousCovered.size, '處', `${indigenousCovered.size}/${lists.indigenous.all.size}＝${pct(indigenousCovered.size, lists.indigenous.all.size)}`)}
+      ${numberCard('山地原鄉已涵蓋', indigenousMountainCovered.size, '處', `${indigenousMountainCovered.size}/${indigenousMountain.size}＝${pct(indigenousMountainCovered.size, indigenousMountain.size)}`)}
+      ${numberCard('平地原鄉已涵蓋', indigenousPlainCovered.size, '處', `${indigenousPlainCovered.size}/${indigenousPlain.size}＝${pct(indigenousPlainCovered.size, indigenousPlain.size)}`)}
+      ${numberCard('原民地區尚未涵蓋', diff(lists.indigenous.all, indigenousCovered).size, '處', `${lists.indigenous.all.size}－${indigenousCovered.size}`)}
+    </div>
+    <div class="manual-note">提醒：第④頁若需要呈現「原民地區提案件數」，建議以原始逐案清單或上方手動覆寫欄位補正；本頁的「鄉鎮涵蓋數」可由目前 Excel 自動計算，但「案件數」會受原始表是否已經彙整影響。</div>
+  </div>`;
+  document.getElementById('mainTitle').textContent = '地方創生簡報數字更新總表';
+  document.getElementById('subtitle').textContent = `上傳 Excel 後自動彙整，更新日期 ${document.getElementById('reportDate').value || ''}`;
+  document.getElementById('statusLine').textContent = `簡報數字頁：已彙整 ${covered.size}/${ALL_PAIR_SET.size} 鄉鎮市區、優先推動地區 ${priorityCovered.size}/${lists.priority.size}、原民地區 ${indigenousCovered.size}/${lists.indigenous.all.size}。`;
+  requestAnimationFrame(scaleStage);
+}
+
+function buildTwoColumnCountyTable(countMap) {
+  const rows = [...countMap.entries()].sort((a,b) => COUNTY_ORDER.indexOf(a[0]) - COUNTY_ORDER.indexOf(b[0]));
+  const half = Math.ceil(rows.length / 2);
+  let html = '';
+  for (let i = 0; i < half; i++) {
+    const left = rows[i] || ['', ''];
+    const right = rows[i + half] || ['', ''];
+    html += `<tr><td>${left[0] || ''}</td><td>${left[1] || ''}</td><td>${right[0] || ''}</td><td>${right[1] || ''}</td></tr>`;
+  }
+  return html;
+}
+
 function renderDashboard() {
   document.getElementById('dateLabel').textContent = document.getElementById('reportDate').value || '';
   if (!parsed) return;
+  if (currentMode === 'brief') { renderBriefNumbers(); return; }
   const lists = getLists();
   let baseSet = ALL_PAIR_SET;
   let title = '地方創生計畫提案情形';
@@ -1199,6 +1494,7 @@ function scaleStage() {
 
 function getCurrentAnalysisContext() {
   if (!parsed) return null;
+  if (currentMode === 'brief') currentMode = 'all';
   const lists = getLists();
   let baseSet = ALL_PAIR_SET;
   let title = '地方創生計畫提案情形';
@@ -1344,6 +1640,42 @@ function setSheetWidths(ws, widths) {
   ws['!cols'] = widths.map(w => ({ wch: w }));
 }
 
+function buildBriefNumberRows(ctx) {
+  const lists = ctx.lists;
+  const noProposal = diff(ALL_PAIR_SET, ctx.allCovered);
+  const priorityMissing = diff(lists.priority, ctx.allPriorityCovered);
+  const indigMissing = diff(lists.indigenous.all, ctx.allIndigCovered);
+  const meetingCount = getNumberInput('meetingCountInput', 56);
+  const reportedPlan = getNumberInput('reportedPlanInput', (parsed.proposalCounts.executing || 0) + (parsed.proposalCounts.counseling || 0));
+  const multiReported = getNumberInput('multiReportedInput', 0);
+  const multiPassed = getNumberInput('multiPassedInput', 0);
+  const priorityRegionTotal = countByRegion(lists.priority);
+  const priorityRegionCovered = countByRegion(ctx.allPriorityCovered);
+  const rows = [
+    ['指標', '數值', '公式／用途'],
+    ['執行中案件數', parsed.proposalCounts.executing || countProposalUnits('executing', ALL_PAIR_SET), '地方創生計畫推動現況頁'],
+    ['輔導中案件數', parsed.proposalCounts.counseling || countProposalUnits('counseling', ALL_PAIR_SET), '地方創生計畫推動現況頁'],
+    ['推動中合計案件數', (parsed.proposalCounts.executing || 0) + (parsed.proposalCounts.counseling || 0), '執行中＋輔導中'],
+    ['執行中涵蓋鄉鎮', parsed.executing.size, '不重複鄉鎮市區'],
+    ['輔導中涵蓋鄉鎮', parsed.counseling.size, '不重複鄉鎮市區'],
+    ['推動中不重複涵蓋鄉鎮', ctx.allCovered.size, `${ctx.allCovered.size}/${ALL_PAIR_SET.size}＝${pct(ctx.allCovered.size, ALL_PAIR_SET.size)}`],
+    ['未提案鄉鎮市區', noProposal.size, `${ALL_PAIR_SET.size}－${ctx.allCovered.size}`],
+    ['工作會議場次', meetingCount, '手動欄位'],
+    ['地方政府提報計畫', reportedPlan, '手動欄位'],
+    ['通過地方創生計畫', parsed.proposalCounts.executing || countProposalUnits('executing', ALL_PAIR_SET), '同執行中案件數'],
+    ['多元徵案提報', multiReported, '手動欄位'],
+    ['多元徵案通過', multiPassed, '手動欄位'],
+    ['優先推動地區已涵蓋', ctx.allPriorityCovered.size, `${ctx.allPriorityCovered.size}/${lists.priority.size}＝${pct(ctx.allPriorityCovered.size, lists.priority.size)}`],
+    ['優先推動地區尚未涵蓋', priorityMissing.size, `${lists.priority.size}－${ctx.allPriorityCovered.size}`],
+    ['原民地區已涵蓋', ctx.allIndigCovered.size, `${ctx.allIndigCovered.size}/${lists.indigenous.all.size}＝${pct(ctx.allIndigCovered.size, lists.indigenous.all.size)}`],
+    ['原民地區尚未涵蓋', indigMissing.size, `${lists.indigenous.all.size}－${ctx.allIndigCovered.size}`],
+    [],
+    ['分區', '已提案優先地區／總數', '涵蓋率'],
+    ...['北區','中區','南區','東區'].map(r => [r, `${priorityRegionCovered[r]}/${priorityRegionTotal[r]}`, pct(priorityRegionCovered[r], priorityRegionTotal[r])])
+  ];
+  return rows;
+} 
+
 function aoaToSheetWithTitle(title, subtitle, aoa) {
   const sheetData = [[title], [subtitle], [], ...aoa];
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
@@ -1387,6 +1719,10 @@ function exportAsExcel() {
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
   setSheetWidths(wsSummary, [24, 22, 56]);
   XLSX.utils.book_append_sheet(wb, wsSummary, '摘要');
+
+  const wsBrief = XLSX.utils.aoa_to_sheet(buildBriefNumberRows(ctx));
+  setSheetWidths(wsBrief, [28, 18, 72]);
+  XLSX.utils.book_append_sheet(wb, wsBrief, '簡報數字');
 
   const proposalMasterRows = buildProposalMasterRows(ctx.lists);
   const wsProposalMaster = XLSX.utils.aoa_to_sheet(proposalMasterRows);
@@ -1463,6 +1799,14 @@ function init() {
   document.getElementById('reportDate').addEventListener('input', renderDashboard);
   document.getElementById('filteredExecOverride').addEventListener('input', renderDashboard);
   document.getElementById('filteredCounselOverride').addEventListener('input', renderDashboard);
+  document.getElementById('meetingCountInput').addEventListener('input', renderDashboard);
+  document.getElementById('reportedPlanInput').addEventListener('input', renderDashboard);
+  document.getElementById('multiReportedInput').addEventListener('input', renderDashboard);
+  document.getElementById('multiPassedInput').addEventListener('input', renderDashboard);
+  document.getElementById('content').addEventListener('click', e => {
+    const button = e.target.closest('[data-copy]');
+    if (button) copyText(button.dataset.copy || '');
+  });
   document.querySelectorAll('.mode-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.mode-pill').forEach(b => b.classList.remove('active'));
