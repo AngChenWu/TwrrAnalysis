@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>地方創生鄉鎮涵蓋自動辨識儀表板</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --brown: #b9855f;
+      --brown-dark: #8d5d3d;
+      --red: #c34f4f;
+      --red-dark: #9f3e3e;
+      --red-soft: #f3dddd;
+      --red-soft-2: #f8eeee;
+      --blue: #4f84bf;
+      --blue-dark: #32689f;
+      --blue-soft: #dfe9f5;
+      --blue-soft-2: #edf3fa;
+      --ink: #1b1f24;
+      --muted: #64748b;
+      --line: #d8dee8;
+      --green: #8bae4f;
+      --green-soft: #eff7df;
+      --cream: #fffdf7;
+      --page: #f5f6f7;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", Arial, sans-serif;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: grid;
+      grid-template-columns: 1.2fr auto;
+      gap: 16px;
+      align-items: center;
+      padding: 12px 18px;
+      border-bottom: 1px solid #d9dee6;
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .toolbar label {
+      font-size: 14px;
+      color: #344054;
+      font-weight: 700;
+    }
+
+    input[type="file"], input[type="text"], select, textarea {
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      background: #fff;
+      padding: 9px 11px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input[type="text"] { width: 130px; }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #fff;
+      background: #334155;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, .12);
+    }
+
+    button:hover { filter: brightness(.96); }
+    button.secondary { background: #64748b; }
+    button.green { background: #6f9636; }
+    button.brown { background: var(--brown-dark); }
+    button.red { background: var(--red-dark); }
+    button.blue { background: var(--blue-dark); }
+
+    .mode-pill {
+      background: #fff;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      box-shadow: none;
+      padding: 9px 12px;
+    }
+    .mode-pill.active {
+      color: #fff;
+      background: #1f4e79;
+      border-color: #1f4e79;
+    }
+
+    details.settings {
+      margin: 12px 18px 0;
+      border: 1px solid #d8dee8;
+      border-radius: 14px;
+      background: #fff;
+      overflow: hidden;
+    }
+    details.settings summary {
+      cursor: pointer;
+      padding: 12px 16px;
+      font-weight: 900;
+      color: #334155;
+    }
+    .settings-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 0 16px 16px;
+    }
+    .settings-body textarea {
+      width: 100%;
+      height: 180px;
+      font-size: 13px;
+      line-height: 1.45;
+      resize: vertical;
+    }
+    .hint {
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .viewport {
+      width: 100%;
+      overflow: auto;
+      padding: 20px;
+    }
+
+    .stage {
+      width: 1920px;
+      min-height: 1080px;
+      height: auto;
+      transform-origin: top left;
+    }
+
+    .slide {
+      position: relative;
+      width: 1920px;
+      min-height: 1080px;
+      height: auto;
+      overflow: visible;
+      background: #fff;
+      border: 1px solid #d7dbe3;
+      box-shadow: 0 18px 48px rgba(15, 23, 42, .14);
+    }
+
+    .slide::after {
+      content: none;
+      display: none;
+    }
+
+    .slide-header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: end;
+      padding: 30px 54px 14px;
+      border-bottom: 1px solid #e7ebf1;
+      background: linear-gradient(180deg, #fff 0%, #fafafa 100%);
+    }
+
+    .title-wrap h1 {
+      margin: 0;
+      color: #244668;
+      font-size: 58px;
+      line-height: 1.05;
+      letter-spacing: 1px;
+      font-weight: 950;
+    }
+    .title-wrap .subtitle {
+      margin-top: 8px;
+      color: #667085;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .date {
+      color: #000;
+      font-size: 38px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1.25fr .92fr;
+      gap: 34px;
+      padding: 24px 54px 44px;
+      min-height: 905px;
+      height: auto;
+      align-items: start;
+    }
+
+    .section {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+    .legend-box {
+      width: 58px;
+      height: 44px;
+      margin-top: 8px;
+    }
+    .legend-box.red { background: var(--brown); }
+    .legend-box.blue { background: #a9c6e8; }
+    .section-title {
+      margin: 0;
+      font-size: 40px;
+      line-height: 1.08;
+      font-weight: 950;
+      letter-spacing: -.5px;
+    }
+    .section-title small {
+      display: block;
+      margin-top: 5px;
+      color: #111827;
+      font-size: 19px;
+      font-weight: 700;
+    }
+
+    .county-grid {
+      flex: 1;
+      display: grid;
+      gap: 11px;
+      align-content: start;
+      min-height: 0;
+      overflow: visible;
+    }
+    .section.exec .county-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .section.counsel .county-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .county-card {
+      border-radius: 2px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.35);
+      background: #fff;
+      break-inside: avoid;
+    }
+    .county-card .county-name {
+      padding: 6px 8px 7px;
+      color: #fff;
+      text-align: center;
+      font-size: 20px;
+      line-height: 1.1;
+      font-weight: 950;
+      letter-spacing: .5px;
+    }
+    .exec .county-card .county-name { background: var(--red); }
+    .counsel .county-card .county-name { background: var(--blue); }
+    .missing-block .county-card .county-name { background: #6f9636; }
+
+    .town-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      background: #fff;
+    }
+    .town {
+      position: relative;
+      min-height: 30px;
+      padding: 5px 6px 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #2d2f33;
+      text-align: center;
+      font-size: 17px;
+      font-weight: 650;
+      line-height: 1.05;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .exec .town { background: var(--red-soft); }
+    .exec .town:nth-child(4n+2), .exec .town:nth-child(4n+3) { background: var(--red-soft-2); }
+    .counsel .town { background: var(--blue-soft); }
+    .counsel .town:nth-child(4n+2), .counsel .town:nth-child(4n+3) { background: var(--blue-soft-2); }
+    .town.priority::after {
+      content: "優";
+      position: absolute;
+      top: 3px;
+      right: 4px;
+      color: #8a5b18;
+      font-size: 10px;
+      font-weight: 950;
+    }
+    .town.indigenous::before {
+      content: "山";
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      margin-right: 3px;
+      border-radius: 999px;
+      background: #244668;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+    .town.plain::before {
+      content: "平";
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      margin-right: 3px;
+      border-radius: 999px;
+      background: #8bae4f;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .right-lower {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .metric-box {
+      border: 4px solid #b9d69f;
+      background: rgba(255,255,255,.88);
+      padding: 10px 16px;
+      color: #000;
+      font-size: 25px;
+      font-weight: 950;
+      line-height: 1.35;
+    }
+    .metric-box.redline { border-color: #c34f4f; }
+    .metric-box .muted { color: #1f2937; font-size: 20px; font-weight: 850; }
+    .metric-row { display: flex; justify-content: space-between; gap: 16px; }
+
+    .missing-block {
+      display: none;
+      padding-top: 4px;
+    }
+    .missing-block.active { display: block; }
+    .missing-title {
+      margin: 0 0 8px;
+      color: #345c1c;
+      font-size: 23px;
+      font-weight: 950;
+    }
+    .missing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      max-height: none;
+      overflow: visible;
+    }
+    .missing-block .town { background: #eff7df; font-size: 15px; min-height: 27px; }
+
+    .logo { display: none; }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      display: grid;
+      place-items: center;
+      border: 3px dashed #d3dae6;
+      border-radius: 20px;
+      color: #64748b;
+      font-size: 30px;
+      font-weight: 900;
+      height: 720px;
+      text-align: center;
+      padding: 30px;
+      background: #fbfcff;
+    }
+    .empty-state small {
+      display: block;
+      margin-top: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+
+    .status-line {
+      padding: 8px 20px 0;
+      color: #475569;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .toolbar, details.settings, .status-line { display: none !important; }
+      .viewport { padding: 0; overflow: visible; }
+      .stage { transform: none !important; }
+      .slide { border: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <label>上傳 Excel</label>
+      <input id="fileInput" type="file" accept=".xlsx,.xls" />
+      <label>日期</label>
+      <input id="reportDate" type="text" value="2026.5.29" />
+      <button class="mode-pill active" data-mode="all">全臺鄉鎮</button>
+      <button class="mode-pill" data-mode="priority">優先推動地區</button>
+      <button class="mode-pill" data-mode="indigenous">原民地區</button>
+    </div>
+    <div class="toolbar-right">
+      <button class="blue" id="reanalyzeBtn">重新分析</button>
+      <button class="green" id="copyPngBtn">複製成圖片</button>
+      <button class="brown" id="downloadPngBtn">下載 PNG</button>
+      <button class="red" id="downloadExcelBtn">下載 Excel</button>
+      <button class="secondary" onclick="window.print()">列印 / 另存 PDF</button>
+    </div>
+  </div>
+
+  <div class="status-line" id="statusLine">尚未上傳 Excel。請使用上方按鈕上傳「地方創生計畫提案情形」統計表。</div>
+
+  <details class="settings">
+    <summary>進階設定：優先推動地區與原民地區清單可自行修正</summary>
+    <div class="settings-body">
+      <div>
+        <div class="hint">每列格式請維持「縣市 鄉鎮市區」，例如「高雄市 燕巢區」。若未來優先推動地區名單有調整，可直接貼上新版清單後按「重新分析」。</div>
+        <textarea id="priorityText"></textarea>
+      </div>
+      <div>
+        <div class="hint">原民地區分為「山地」與「平地」，每列格式為「類型 縣市 鄉鎮市區」。若上傳檔案是「鄉鎮彙整表」而非逐案資料，系統無法從鄉鎮清單反推原民提案件數，可於下方手動覆寫；例如執行中 74、輔導中 15。</div>
+        <textarea id="indigenousText"></textarea>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+          <input id="filteredExecOverride" type="text" placeholder="篩選模式：執行中提案件數覆寫" />
+          <input id="filteredCounselOverride" type="text" placeholder="篩選模式：輔導中提案件數覆寫" />
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <div class="viewport">
+    <div class="stage" id="stage">
+      <div class="slide" id="slide">
+        <div class="slide-header">
+          <div class="title-wrap">
+            <h1 id="mainTitle">地方創生計畫提案情形</h1>
+            <div class="subtitle" id="subtitle">上傳 Excel 後，系統將自動辨識縣市、鄉鎮市區、執行中與輔導中涵蓋情形</div>
+          </div>
+          <div class="date" id="dateLabel">2026.5.29</div>
+        </div>
+        <div class="content" id="content">
+          <div class="empty-state">
+            請上傳 Excel 開始分析
+            <small>建議格式：A欄為縣市別；B、C欄為已通過工作會議／執行中；D、E欄為輔導中。<br>若儲存格內含跨縣市文字，例如「高雄市岡山區、燕巢區、田寮區」，系統會依縣市脈絡納入辨識。</small>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+<script>
+const COUNTY_ORDER = ['基隆市','臺北市','新北市','桃園市','新竹市','新竹縣','苗栗縣','臺中市','彰化縣','南投縣','雲林縣','嘉義市','嘉義縣','臺南市','高雄市','屏東縣','宜蘭縣','花蓮縣','臺東縣','澎湖縣','金門縣','連江縣'];
+const COUNTY_TOWNS = {
+  '基隆市':['中正區','七堵區','暖暖區','仁愛區','中山區','安樂區','信義區'],
+  '臺北市':['中正區','大同區','中山區','松山區','大安區','萬華區','信義區','士林區','北投區','內湖區','南港區','文山區'],
+  '新北市':['板橋區','三重區','中和區','永和區','新莊區','新店區','土城區','蘆洲區','樹林區','汐止區','鶯歌區','三峽區','淡水區','瑞芳區','五股區','泰山區','林口區','深坑區','石碇區','坪林區','三芝區','石門區','八里區','平溪區','雙溪區','貢寮區','金山區','萬里區','烏來區'],
+  '桃園市':['桃園區','中壢區','平鎮區','八德區','楊梅區','蘆竹區','大溪區','龍潭區','龜山區','大園區','觀音區','新屋區','復興區'],
+  '新竹市':['東區','北區','香山區'],
+  '新竹縣':['竹北市','竹東鎮','新埔鎮','關西鎮','湖口鄉','新豐鄉','芎林鄉','橫山鄉','北埔鄉','寶山鄉','峨眉鄉','尖石鄉','五峰鄉'],
+  '苗栗縣':['苗栗市','苑裡鎮','通霄鎮','竹南鎮','頭份市','後龍鎮','卓蘭鎮','大湖鄉','公館鄉','銅鑼鄉','南庄鄉','頭屋鄉','三義鄉','西湖鄉','造橋鄉','三灣鄉','獅潭鄉','泰安鄉'],
+  '臺中市':['中區','東區','南區','西區','北區','北屯區','西屯區','南屯區','太平區','大里區','霧峰區','烏日區','豐原區','后里區','石岡區','東勢區','和平區','新社區','潭子區','大雅區','神岡區','大肚區','沙鹿區','龍井區','梧棲區','清水區','大甲區','外埔區','大安區'],
+  '彰化縣':['彰化市','鹿港鎮','和美鎮','線西鄉','伸港鄉','福興鄉','秀水鄉','花壇鄉','芬園鄉','員林市','溪湖鎮','田中鎮','大村鄉','埔鹽鄉','埔心鄉','永靖鄉','社頭鄉','二水鄉','北斗鎮','二林鎮','田尾鄉','埤頭鄉','芳苑鄉','大城鄉','竹塘鄉','溪州鄉'],
+  '南投縣':['南投市','埔里鎮','草屯鎮','竹山鎮','集集鎮','名間鄉','鹿谷鄉','中寮鄉','魚池鄉','國姓鄉','水里鄉','信義鄉','仁愛鄉'],
+  '雲林縣':['斗六市','斗南鎮','虎尾鎮','西螺鎮','土庫鎮','北港鎮','古坑鄉','大埤鄉','莿桐鄉','林內鄉','二崙鄉','崙背鄉','麥寮鄉','東勢鄉','褒忠鄉','臺西鄉','元長鄉','四湖鄉','口湖鄉','水林鄉'],
+  '嘉義市':['東區','西區'],
+  '嘉義縣':['太保市','朴子市','布袋鎮','大林鎮','民雄鄉','溪口鄉','新港鄉','六腳鄉','東石鄉','義竹鄉','鹿草鄉','水上鄉','中埔鄉','竹崎鄉','梅山鄉','番路鄉','大埔鄉','阿里山鄉'],
+  '臺南市':['中西區','東區','南區','北區','安平區','安南區','永康區','歸仁區','新化區','左鎮區','玉井區','楠西區','南化區','仁德區','關廟區','龍崎區','官田區','麻豆區','佳里區','西港區','七股區','將軍區','學甲區','北門區','新營區','後壁區','白河區','東山區','六甲區','下營區','柳營區','鹽水區','善化區','大內區','山上區','新市區','安定區'],
+  '高雄市':['楠梓區','左營區','鼓山區','三民區','鹽埕區','前金區','新興區','苓雅區','前鎮區','旗津區','小港區','鳳山區','林園區','大寮區','大樹區','大社區','仁武區','鳥松區','岡山區','橋頭區','燕巢區','田寮區','阿蓮區','路竹區','湖內區','茄萣區','永安區','彌陀區','梓官區','旗山區','美濃區','六龜區','甲仙區','杉林區','內門區','茂林區','桃源區','那瑪夏區'],
+  '屏東縣':['屏東市','潮州鎮','東港鎮','恆春鎮','萬丹鄉','長治鄉','麟洛鄉','九如鄉','里港鄉','鹽埔鄉','高樹鄉','萬巒鄉','內埔鄉','竹田鄉','新埤鄉','枋寮鄉','新園鄉','崁頂鄉','林邊鄉','南州鄉','佳冬鄉','琉球鄉','車城鄉','滿州鄉','枋山鄉','三地門鄉','霧臺鄉','瑪家鄉','泰武鄉','來義鄉','春日鄉','獅子鄉','牡丹鄉'],
+  '宜蘭縣':['宜蘭市','羅東鎮','蘇澳鎮','頭城鎮','礁溪鄉','壯圍鄉','員山鄉','冬山鄉','五結鄉','三星鄉','大同鄉','南澳鄉'],
+  '花蓮縣':['花蓮市','鳳林鎮','玉里鎮','新城鄉','吉安鄉','壽豐鄉','光復鄉','豐濱鄉','瑞穗鄉','富里鄉','秀林鄉','萬榮鄉','卓溪鄉'],
+  '臺東縣':['臺東市','成功鎮','關山鎮','卑南鄉','大武鄉','太麻里鄉','東河鄉','長濱鄉','鹿野鄉','池上鄉','綠島鄉','延平鄉','海端鄉','達仁鄉','金峰鄉','蘭嶼鄉'],
+  '澎湖縣':['馬公市','湖西鄉','白沙鄉','西嶼鄉','望安鄉','七美鄉'],
+  '金門縣':['金城鎮','金湖鎮','金沙鎮','金寧鄉','烈嶼鄉','烏坵鄉'],
+  '連江縣':['南竿鄉','北竿鄉','莒光鄉','東引鄉']
+};
+
+const DEFAULT_PRIORITY_TEXT = `新北市 瑞芳區
+新北市 平溪區
+新北市 貢寮區
+桃園市 復興區
+新竹縣 尖石鄉
+新竹縣 五峰鄉
+苗栗縣 南庄鄉
+苗栗縣 獅潭鄉
+苗栗縣 泰安鄉
+臺中市 后里區
+臺中市 新社區
+臺中市 石岡區
+臺中市 外埔區
+臺中市 大安區
+臺中市 和平區
+彰化縣 田中鎮
+彰化縣 二林鎮
+彰化縣 福興鄉
+彰化縣 秀水鄉
+彰化縣 芬園鄉
+彰化縣 埔鹽鄉
+彰化縣 埔心鄉
+彰化縣 永靖鄉
+彰化縣 社頭鄉
+彰化縣 田尾鄉
+彰化縣 埤頭鄉
+彰化縣 芳苑鄉
+彰化縣 大城鄉
+彰化縣 溪州鄉
+彰化縣 和美鎮
+彰化縣 竹塘鄉
+彰化縣 二水鄉
+彰化縣 花壇鄉
+彰化縣 線西鄉
+南投縣 埔里鎮
+南投縣 竹山鎮
+南投縣 魚池鄉
+南投縣 國姓鄉
+南投縣 水里鄉
+南投縣 信義鄉
+南投縣 仁愛鄉
+南投縣 名間鄉
+南投縣 中寮鄉
+雲林縣 古坑鄉
+雲林縣 林內鄉
+雲林縣 四湖鄉
+雲林縣 口湖鄉
+雲林縣 水林鄉
+雲林縣 臺西鄉
+嘉義縣 東石鄉
+嘉義縣 大埔鄉
+嘉義縣 阿里山鄉
+嘉義縣 布袋鎮
+臺南市 鹽水區
+臺南市 後壁區
+臺南市 七股區
+臺南市 楠西區
+臺南市 左鎮區
+臺南市 關廟區
+臺南市 東山區
+臺南市 大內區
+臺南市 西港區
+臺南市 將軍區
+臺南市 北門區
+臺南市 玉井區
+臺南市 南化區
+高雄市 旗津區
+高雄市 大樹區
+高雄市 阿蓮區
+高雄市 茄萣區
+高雄市 彌陀區
+高雄市 旗山區
+高雄市 六龜區
+高雄市 甲仙區
+高雄市 內門區
+高雄市 茂林區
+高雄市 桃源區
+高雄市 那瑪夏區
+高雄市 林園區
+高雄市 燕巢區
+高雄市 田寮區
+屏東縣 東港鎮
+屏東縣 高樹鄉
+屏東縣 萬巒鄉
+屏東縣 內埔鄉
+屏東縣 竹田鄉
+屏東縣 枋寮鄉
+屏東縣 新園鄉
+屏東縣 林邊鄉
+屏東縣 佳冬鄉
+屏東縣 車城鄉
+屏東縣 滿州鄉
+屏東縣 三地門鄉
+屏東縣 霧臺鄉
+屏東縣 瑪家鄉
+屏東縣 泰武鄉
+屏東縣 來義鄉
+屏東縣 春日鄉
+屏東縣 獅子鄉
+屏東縣 牡丹鄉
+屏東縣 萬丹鄉
+屏東縣 九如鄉
+屏東縣 鹽埔鄉
+屏東縣 枋山鄉
+屏東縣 琉球鄉
+屏東縣 新埤鄉
+屏東縣 崁頂鄉
+屏東縣 南州鄉
+宜蘭縣 蘇澳鎮
+宜蘭縣 大同鄉
+宜蘭縣 南澳鄉
+花蓮縣 壽豐鄉
+花蓮縣 光復鄉
+花蓮縣 富里鄉
+花蓮縣 秀林鄉
+花蓮縣 萬榮鄉
+花蓮縣 卓溪鄉
+花蓮縣 鳳林鎮
+花蓮縣 玉里鎮
+花蓮縣 豐濱鄉
+花蓮縣 瑞穗鄉
+臺東縣 成功鎮
+臺東縣 關山鎮
+臺東縣 卑南鄉
+臺東縣 大武鄉
+臺東縣 太麻里鄉
+臺東縣 長濱鄉
+臺東縣 鹿野鄉
+臺東縣 池上鄉
+臺東縣 延平鄉
+臺東縣 海端鄉
+臺東縣 達仁鄉
+臺東縣 金峰鄉
+臺東縣 蘭嶼鄉`;
+
+const DEFAULT_INDIGENOUS_TEXT = `山地 新北市 烏來區
+山地 桃園市 復興區
+山地 新竹縣 尖石鄉
+山地 新竹縣 五峰鄉
+山地 苗栗縣 泰安鄉
+山地 臺中市 和平區
+山地 南投縣 仁愛鄉
+山地 南投縣 信義鄉
+山地 嘉義縣 阿里山鄉
+山地 高雄市 茂林區
+山地 高雄市 桃源區
+山地 高雄市 那瑪夏區
+山地 屏東縣 三地門鄉
+山地 屏東縣 霧臺鄉
+山地 屏東縣 瑪家鄉
+山地 屏東縣 泰武鄉
+山地 屏東縣 來義鄉
+山地 屏東縣 春日鄉
+山地 屏東縣 獅子鄉
+山地 屏東縣 牡丹鄉
+山地 宜蘭縣 大同鄉
+山地 宜蘭縣 南澳鄉
+山地 花蓮縣 秀林鄉
+山地 花蓮縣 萬榮鄉
+山地 花蓮縣 卓溪鄉
+山地 臺東縣 延平鄉
+山地 臺東縣 海端鄉
+山地 臺東縣 達仁鄉
+山地 臺東縣 金峰鄉
+山地 臺東縣 蘭嶼鄉
+平地 新竹縣 關西鎮
+平地 苗栗縣 南庄鄉
+平地 苗栗縣 獅潭鄉
+平地 南投縣 魚池鄉
+平地 屏東縣 滿州鄉
+平地 花蓮縣 花蓮市
+平地 花蓮縣 鳳林鎮
+平地 花蓮縣 玉里鎮
+平地 花蓮縣 新城鄉
+平地 花蓮縣 吉安鄉
+平地 花蓮縣 壽豐鄉
+平地 花蓮縣 光復鄉
+平地 花蓮縣 豐濱鄉
+平地 花蓮縣 瑞穗鄉
+平地 花蓮縣 富里鄉
+平地 臺東縣 臺東市
+平地 臺東縣 成功鎮
+平地 臺東縣 關山鎮
+平地 臺東縣 卑南鄉
+平地 臺東縣 大武鄉
+平地 臺東縣 太麻里鄉
+平地 臺東縣 東河鄉
+平地 臺東縣 長濱鄉
+平地 臺東縣 鹿野鄉
+平地 臺東縣 池上鄉`;
+
+let currentMode = 'all';
+let parsed = null;
+let workbookRows = null;
+let workbookSheet = null;
+
+const ALL_PAIR_SET = new Set();
+const TOWN_TO_COUNTIES = new Map();
+for (const county of COUNTY_ORDER) {
+  for (const town of COUNTY_TOWNS[county] || []) {
+    const key = makeKey(county, town);
+    ALL_PAIR_SET.add(key);
+    if (!TOWN_TO_COUNTIES.has(town)) TOWN_TO_COUNTIES.set(town, []);
+    TOWN_TO_COUNTIES.get(town).push(county);
+  }
+}
+const ALL_TOKENS = [...new Set([...COUNTY_ORDER, ...Object.keys(Object.fromEntries([...TOWN_TO_COUNTIES].map(([k]) => [k, true])))])]
+  .sort((a,b) => b.length - a.length)
+  .map(escapeRegExp)
+  .join('|');
+const TOKEN_RE = new RegExp(ALL_TOKENS, 'g');
+
+function normalizeText(value) {
+  return String(value ?? '')
+    .replace(/台/g, '臺')
+    .replace(/⾧/g, '長')
+    .replace(/霧台/g, '霧臺')
+    .replace(/滿洲鄉/g, '滿州鄉')
+    .replace(/\s+/g, '')
+    .trim();
+}
+function displayText(value) { return String(value ?? '').replace(/台/g, '臺').replace(/⾧/g, '長').trim(); }
+function makeKey(county, town) { return `${displayText(county)}|${displayText(town)}`; }
+function splitKey(key) { const [county, town] = key.split('|'); return { county, town }; }
+function escapeRegExp(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function pct(num, den, digit = 1) { return den ? `${(num / den * 100).toFixed(digit)}%` : '0.0%'; }
+function inter(setA, setB) { return new Set([...setA].filter(x => setB.has(x))); }
+function union(...sets) { const out = new Set(); sets.forEach(s => [...s].forEach(x => out.add(x))); return out; }
+function diff(setA, setB) { return new Set([...setA].filter(x => !setB.has(x))); }
+
+function parsePairLines(text) {
+  const set = new Set();
+  const lines = String(text || '').split(/\n+/);
+  for (const line of lines) {
+    const cleaned = displayText(line).replace(/[，,、]/g, ' ');
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    let county = null, town = null;
+    for (const p of parts) {
+      const n = displayText(p);
+      if (COUNTY_TOWNS[n]) county = n;
+      else if (n.match(/[市鎮鄉區]$/)) town = n;
+    }
+    if (county && town && COUNTY_TOWNS[county]?.includes(town)) set.add(makeKey(county, town));
+  }
+  return set;
+}
+
+function parseIndigenousLines(text) {
+  const all = new Set();
+  const type = new Map();
+  const lines = String(text || '').split(/\n+/);
+  for (const line of lines) {
+    const cleaned = displayText(line).replace(/[，,、]/g, ' ');
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    let kind = parts.find(p => p.includes('山')) ? 'mountain' : (parts.find(p => p.includes('平')) ? 'plain' : 'plain');
+    let county = null, town = null;
+    for (const p of parts) {
+      const n = displayText(p);
+      if (COUNTY_TOWNS[n]) county = n;
+      else if (n.match(/[市鎮鄉區]$/)) town = n;
+    }
+    if (county && town && COUNTY_TOWNS[county]?.includes(town)) {
+      const key = makeKey(county, town);
+      all.add(key);
+      type.set(key, kind);
+    }
+  }
+  return { all, type };
+}
+
+function getLists() {
+  return {
+    priority: parsePairLines(document.getElementById('priorityText').value),
+    indigenous: parseIndigenousLines(document.getElementById('indigenousText').value)
+  };
+}
+
+function detectCounty(value) {
+  const text = displayText(value).replace(/[\s\n]/g, '');
+  return COUNTY_ORDER.find(c => text.includes(c)) || null;
+}
+
+function expandSpecials(text, defaultCounty, out) {
+  const t = normalizeText(text);
+  const add = (county, town) => { if (COUNTY_TOWNS[county]?.includes(town)) out.add(makeKey(county, town)); };
+  if (t.includes('臺中市中西區') || (defaultCounty === '臺中市' && t.includes('中西區'))) { add('臺中市','中區'); add('臺中市','西區'); }
+  if ((defaultCounty === '連江縣' || t.includes('連江縣')) && t.includes('南北竿')) { add('連江縣','南竿鄉'); add('連江縣','北竿鄉'); }
+}
+
+function extractPairsFromText(value, defaultCounty = null) {
+  const text = normalizeText(value);
+  const out = new Set();
+  if (!text) return out;
+  expandSpecials(text, defaultCounty, out);
+  let currentCounty = defaultCounty;
+  TOKEN_RE.lastIndex = 0;
+  let match;
+  while ((match = TOKEN_RE.exec(text)) !== null) {
+    const token = displayText(match[0]);
+    if (COUNTY_TOWNS[token]) {
+      currentCounty = token;
+      continue;
+    }
+    if (TOWN_TO_COUNTIES.has(token)) {
+      const candidates = TOWN_TO_COUNTIES.get(token);
+      if (currentCounty && COUNTY_TOWNS[currentCounty]?.includes(token)) {
+        out.add(makeKey(currentCounty, token));
+      } else if (!currentCounty && candidates.length === 1) {
+        out.add(makeKey(candidates[0], token));
+      }
+    }
+  }
+  return out;
+}
+
+function getCellText(rows, r, c) {
+  return displayText(rows?.[r]?.[c] ?? '');
+}
+
+function getMergedAnchorValue(sheet, rows, r, c) {
+  const direct = getCellText(rows, r, c);
+  if (direct) return direct;
+  const merges = sheet?.['!merges'] || [];
+  for (const m of merges) {
+    if (r >= m.s.r && r <= m.e.r && c >= m.s.c && c <= m.e.c) {
+      return getCellText(rows, m.s.r, m.s.c);
+    }
+  }
+  return '';
+}
+
+function detectStatusForCol(rows, sheet, c) {
+  const header = `${getMergedAnchorValue(sheet, rows, 0, c)} ${getMergedAnchorValue(sheet, rows, 1, c)}`;
+  if (/輔導/.test(header)) return 'counseling';
+  if (/通過|執行|工作會議/.test(header)) return 'executing';
+  if (c === 1 || c === 2) return 'executing';
+  if (c >= 3) return 'counseling';
+  return null;
+}
+
+function extractProposalCount(rows, sheet, status) {
+  const counts = [];
+  const maxCol = Math.max(...rows.slice(0,2).map(r => r.length));
+  for (let c = 1; c < maxCol; c++) {
+    const s = detectStatusForCol(rows, sheet, c);
+    const h = `${getMergedAnchorValue(sheet, rows, 0, c)} ${getMergedAnchorValue(sheet, rows, 1, c)}`;
+    if (s === status) {
+      const m = h.match(/(\d+)\s*件/);
+      if (m) counts.push(Number(m[1]));
+    }
+  }
+  return counts.length ? Math.max(...counts) : 0;
+}
+
+function analyzeRows(rows, sheet) {
+  const executing = new Set();
+  const counseling = new Set();
+  const sourceMap = { executing: new Map(), counseling: new Map() };
+  const proposalUnits = { executing: [], counseling: [] };
+  const maxCol = Math.max(...rows.map(r => r.length));
+  for (let r = 2; r < rows.length; r++) {
+    const row = rows[r] || [];
+    const defaultCounty = detectCounty(row[0]);
+    if (!defaultCounty && row.every(v => !displayText(v))) continue;
+    for (let c = 1; c < maxCol; c++) {
+      const status = detectStatusForCol(rows, sheet, c);
+      if (!status) continue;
+      const text = row[c];
+      if (!displayText(text)) continue;
+      const pairs = extractPairsFromText(text, defaultCounty);
+      if (pairs.size) proposalUnits[status].push({ row: r, col: c, text: displayText(text), pairs });
+      for (const key of pairs) {
+        const target = status === 'executing' ? executing : counseling;
+        target.add(key);
+        if (!sourceMap[status].has(key)) sourceMap[status].set(key, []);
+        sourceMap[status].get(key).push(displayText(text).slice(0, 80));
+      }
+    }
+  }
+  return {
+    executing,
+    counseling,
+    sourceMap,
+    proposalUnits,
+    proposalCounts: {
+      executing: extractProposalCount(rows, sheet, 'executing'),
+      counseling: extractProposalCount(rows, sheet, 'counseling')
+    }
+  };
+}
+
+function groupByCounty(set) {
+  const grouped = new Map();
+  for (const county of COUNTY_ORDER) grouped.set(county, []);
+  for (const key of set) {
+    const { county, town } = splitKey(key);
+    if (!grouped.has(county)) grouped.set(county, []);
+    grouped.get(county).push(town);
+  }
+  for (const county of grouped.keys()) {
+    const order = COUNTY_TOWNS[county] || [];
+    grouped.set(county, grouped.get(county).sort((a,b) => order.indexOf(a) - order.indexOf(b)));
+  }
+  return grouped;
+}
+
+function renderCountyCards(set, sectionClass, lists) {
+  const grouped = groupByCounty(set);
+  let html = '';
+  for (const county of COUNTY_ORDER) {
+    const towns = grouped.get(county) || [];
+    if (!towns.length) continue;
+    html += `<div class="county-card"><div class="county-name">${county}(${towns.length})</div><div class="town-list">`;
+    for (const town of towns) {
+      const key = makeKey(county, town);
+      const cls = [
+        'town',
+        currentMode === 'all' && lists.priority.has(key) ? 'priority' : '',
+        lists.indigenous.type.get(key) === 'mountain' ? 'indigenous' : '',
+        lists.indigenous.type.get(key) === 'plain' ? 'plain' : ''
+      ].filter(Boolean).join(' ');
+      html += `<div class="${cls}" title="${county}${town}">${town}</div>`;
+    }
+    if (towns.length % 2 === 1) html += `<div class="town"></div>`;
+    html += `</div></div>`;
+  }
+  return html || `<div class="hint">目前沒有辨識到${sectionClass === 'exec' ? '執行中' : '輔導中'}鄉鎮。</div>`;
+}
+
+function renderMissingCards(set) {
+  const grouped = groupByCounty(set);
+  let html = '';
+  for (const county of COUNTY_ORDER) {
+    const towns = grouped.get(county) || [];
+    if (!towns.length) continue;
+    html += `<div class="county-card"><div class="county-name">${county}(${towns.length})</div><div class="town-list">`;
+    for (const town of towns) html += `<div class="town">${town}</div>`;
+    if (towns.length % 2 === 1) html += `<div class="town"></div>`;
+    html += `</div></div>`;
+  }
+  return html;
+}
+
+function countProposalUnits(status, baseSet) {
+  if (!parsed?.proposalUnits?.[status]) return 0;
+  const seen = new Set();
+  for (const unit of parsed.proposalUnits[status]) {
+    const hit = [...unit.pairs].some(k => baseSet.has(k));
+    if (hit) seen.add(`${unit.row}|${unit.col}|${unit.text}`);
+  }
+  return seen.size;
+}
+
+function getOverrideNumber(id) {
+  const raw = document.getElementById(id)?.value?.trim();
+  if (!raw) return null;
+  const n = Number(raw.replace(/[^0-9.]/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
+function getDisplayProposalCount(status, baseSet) {
+  if (currentMode === 'all') return parsed.proposalCounts[status] || '—';
+  const overrideId = status === 'executing' ? 'filteredExecOverride' : 'filteredCounselOverride';
+  const override = getOverrideNumber(overrideId);
+  if (override !== null) return override;
+  const filtered = countProposalUnits(status, baseSet);
+  return filtered || '—';
+}
+
+function renderDashboard() {
+  document.getElementById('dateLabel').textContent = document.getElementById('reportDate').value || '';
+  if (!parsed) return;
+  const lists = getLists();
+  let baseSet = ALL_PAIR_SET;
+  let title = '地方創生計畫提案情形';
+  let baseLabel = '全國鄉鎮市區';
+  let shortLabel = '鄉鎮區';
+  if (currentMode === 'priority') {
+    baseSet = lists.priority;
+    title = '優先推動地區提案涵蓋情形';
+    baseLabel = '優先推動地區';
+    shortLabel = '優先地區';
+  } else if (currentMode === 'indigenous') {
+    baseSet = lists.indigenous.all;
+    title = '原民地區計畫推動情形';
+    baseLabel = '原民地區';
+    shortLabel = '原民鄉鎮';
+  }
+
+  const exec = inter(parsed.executing, baseSet);
+  const counsel = inter(parsed.counseling, baseSet);
+  const covered = union(exec, counsel);
+  const overlap = inter(exec, counsel);
+  const missing = diff(baseSet, covered);
+  const allCovered = union(parsed.executing, parsed.counseling);
+  const allPriorityCovered = inter(allCovered, lists.priority);
+  const allIndigCovered = inter(allCovered, lists.indigenous.all);
+  const totalProposals = (parsed.proposalCounts.executing || 0) + (parsed.proposalCounts.counseling || 0);
+
+  document.getElementById('mainTitle').textContent = title;
+  document.getElementById('subtitle').textContent = `自動辨識結果：推動中涵蓋 ${covered.size} / ${baseSet.size}，涵蓋率 ${pct(covered.size, baseSet.size)}`;
+
+  const indigenousMountain = new Set([...lists.indigenous.all].filter(k => lists.indigenous.type.get(k) === 'mountain'));
+  const indigenousPlain = new Set([...lists.indigenous.all].filter(k => lists.indigenous.type.get(k) === 'plain'));
+  const coveredMountain = inter(covered, indigenousMountain).size;
+  const coveredPlain = inter(covered, indigenousPlain).size;
+  const execProposalCount = getDisplayProposalCount('executing', baseSet);
+  const counselProposalCount = getDisplayProposalCount('counseling', baseSet);
+
+  let metricExtra = '';
+  if (currentMode === 'indigenous') {
+    metricExtra = `<div class="metric-box"><div class="metric-row"><span>${coveredMountain}山地 / ${indigenousMountain.size}原鄉</span><span>${pct(coveredMountain, indigenousMountain.size, 0)}</span></div><div class="metric-row"><span>${coveredPlain}平地 / ${indigenousPlain.size}原鄉</span><span>${pct(coveredPlain, indigenousPlain.size, 0)}</span></div></div>`;
+  } else {
+    metricExtra = `<div class="metric-box"><div>${allCovered.size} / ${ALL_PAIR_SET.size} = ${pct(allCovered.size, ALL_PAIR_SET.size)} <span class="muted">（占全國鄉鎮數比例）</span></div><div>${allPriorityCovered.size} / ${lists.priority.size} = ${pct(allPriorityCovered.size, lists.priority.size)} <span class="muted">（優先地區提案比例）</span></div>${lists.indigenous.all.size ? `<div>${allIndigCovered.size} / ${lists.indigenous.all.size} = ${pct(allIndigCovered.size, lists.indigenous.all.size)} <span class="muted">（原民地區提案比例）</span></div>` : ''}</div>`;
+  }
+
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <section class="section exec">
+      <div class="section-head">
+        <div class="legend-box red"></div>
+        <div>
+          <h2 class="section-title">執行中(${execProposalCount}件提案，涵蓋${exec.size}個${shortLabel})<small>註：${overlap.size}個${shortLabel}與輔導中案件重疊；同一鄉鎮有多案時以不重複計算</small></h2>
+        </div>
+      </div>
+      <div class="county-grid">${renderCountyCards(exec, 'exec', lists)}</div>
+    </section>
+    <section class="section counsel">
+      <div class="section-head">
+        <div class="legend-box blue"></div>
+        <div>
+          <h2 class="section-title">輔導中(${counselProposalCount}件提案，涵蓋${counsel.size}個${shortLabel})<small>註：跨縣市提案依文字中縣市脈絡納入辨識，例如高雄市燕巢區、田寮區</small></h2>
+        </div>
+      </div>
+      <div class="county-grid">${renderCountyCards(counsel, 'counsel', lists)}</div>
+      <div class="right-lower">
+        ${metricExtra}
+        <div class="metric-box redline"><div>${covered.size} / ${baseSet.size} = ${pct(covered.size, baseSet.size)} <span class="muted">（${baseLabel}推動中涵蓋率）</span></div><div>${missing.size}處尚未涵蓋 <span class="muted">（可作為缺口追蹤清單）</span></div></div>
+        <div class="missing-block ${currentMode === 'all' ? '' : 'active'}">
+          <h3 class="missing-title">尚未涵蓋${baseLabel}</h3>
+          <div class="missing-grid">${renderMissingCards(missing)}</div>
+        </div>
+      </div>
+    </section>
+  `;
+  document.getElementById('statusLine').textContent = `已完成分析：執行中 ${parsed.executing.size} 個鄉鎮市區、輔導中 ${parsed.counseling.size} 個鄉鎮市區、推動中不重複 ${union(parsed.executing, parsed.counseling).size} 個鄉鎮市區。`;
+  requestAnimationFrame(scaleStage);
+}
+
+async function handleFile(file) {
+  if (!window.XLSX) {
+    alert('XLSX 套件尚未載入，請確認網路可連到 CDN 後重新整理。');
+    return;
+  }
+  const buffer = await file.arrayBuffer();
+  const wb = XLSX.read(buffer, { type: 'array', cellDates: false });
+  const sheetName = wb.SheetNames[0];
+  workbookSheet = wb.Sheets[sheetName];
+  workbookRows = XLSX.utils.sheet_to_json(workbookSheet, { header: 1, raw: false, defval: '' });
+  parsed = analyzeRows(workbookRows, workbookSheet);
+  renderDashboard();
+}
+
+function scaleStage() {
+  const viewport = document.querySelector('.viewport');
+  const stage = document.getElementById('stage');
+  const slide = document.getElementById('slide');
+  const available = Math.max(320, viewport.clientWidth - 40);
+  const scale = Math.min(1, available / 1920);
+  stage.style.transform = `scale(${scale})`;
+  stage.style.height = `${slide.scrollHeight * scale}px`;
+}
+
+function getCurrentAnalysisContext() {
+  if (!parsed) return null;
+  const lists = getLists();
+  let baseSet = ALL_PAIR_SET;
+  let title = '地方創生計畫提案情形';
+  let baseLabel = '全國鄉鎮市區';
+  let shortLabel = '鄉鎮區';
+  if (currentMode === 'priority') {
+    baseSet = lists.priority;
+    title = '優先推動地區提案涵蓋情形';
+    baseLabel = '優先推動地區';
+    shortLabel = '優先地區';
+  } else if (currentMode === 'indigenous') {
+    baseSet = lists.indigenous.all;
+    title = '原民地區計畫推動情形';
+    baseLabel = '原民地區';
+    shortLabel = '原民鄉鎮';
+  }
+  const exec = inter(parsed.executing, baseSet);
+  const counsel = inter(parsed.counseling, baseSet);
+  const covered = union(exec, counsel);
+  const overlap = inter(exec, counsel);
+  const missing = diff(baseSet, covered);
+  const allCovered = union(parsed.executing, parsed.counseling);
+  const allPriorityCovered = inter(allCovered, lists.priority);
+  const allIndigCovered = inter(allCovered, lists.indigenous.all);
+  const indigenousMountain = new Set([...lists.indigenous.all].filter(k => lists.indigenous.type.get(k) === 'mountain'));
+  const indigenousPlain = new Set([...lists.indigenous.all].filter(k => lists.indigenous.type.get(k) === 'plain'));
+  const coveredMountain = inter(covered, indigenousMountain).size;
+  const coveredPlain = inter(covered, indigenousPlain).size;
+  return {
+    lists, baseSet, title, baseLabel, shortLabel,
+    exec, counsel, covered, overlap, missing,
+    allCovered, allPriorityCovered, allIndigCovered,
+    indigenousMountain, indigenousPlain, coveredMountain, coveredPlain,
+    execProposalCount: getDisplayProposalCount('executing', baseSet),
+    counselProposalCount: getDisplayProposalCount('counseling', baseSet)
+  };
+}
+
+function buildCountyCardAOA(set, cardsPerRow = 4) {
+  const grouped = groupByCounty(set);
+  const cards = [];
+  for (const county of COUNTY_ORDER) {
+    const towns = grouped.get(county) || [];
+    if (!towns.length) continue;
+    const rows = [];
+    rows.push([`${county}(${towns.length})`, '']);
+    for (let i = 0; i < towns.length; i += 2) rows.push([towns[i] || '', towns[i + 1] || '']);
+    cards.push(rows);
+  }
+  const aoa = [];
+  for (let i = 0; i < cards.length; i += cardsPerRow) {
+    const rowCards = cards.slice(i, i + cardsPerRow);
+    const maxRows = Math.max(...rowCards.map(card => card.length));
+    for (let r = 0; r < maxRows; r++) {
+      const row = [];
+      rowCards.forEach((card, idx) => {
+        row.push(...(card[r] || ['', '']));
+        if (idx < cardsPerRow - 1) row.push('');
+      });
+      aoa.push(row);
+    }
+    aoa.push([]);
+  }
+  return aoa.length ? aoa : [['目前沒有資料']];
+}
+
+function makeDetailRows(set, statusLabel, lists) {
+  return [...set].map(key => {
+    const { county, town } = splitKey(key);
+    const sourceKey = statusLabel === '執行中' ? 'executing' : 'counseling';
+    const sources = parsed?.sourceMap?.[sourceKey]?.get(key) || [];
+    const indigType = lists.indigenous.type.get(key) === 'mountain' ? '山地原住民地區' : (lists.indigenous.type.get(key) === 'plain' ? '平地原住民地區' : '');
+    return [statusLabel, county, town, lists.priority.has(key) ? '是' : '', indigType, sources.join('；')];
+  }).sort((a,b) => COUNTY_ORDER.indexOf(a[1]) - COUNTY_ORDER.indexOf(b[1]) || (COUNTY_TOWNS[a[1]] || []).indexOf(a[2]) - (COUNTY_TOWNS[b[1]] || []).indexOf(b[2]));
+}
+
+function setSheetWidths(ws, widths) {
+  ws['!cols'] = widths.map(w => ({ wch: w }));
+}
+
+function aoaToSheetWithTitle(title, subtitle, aoa) {
+  const sheetData = [[title], [subtitle], [], ...aoa];
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+  setSheetWidths(ws, Array(16).fill(13));
+  return ws;
+}
+
+function exportAsExcel() {
+  if (!window.XLSX) {
+    alert('XLSX 套件尚未載入，請確認網路可連到 CDN 後重新整理。');
+    return;
+  }
+  const ctx = getCurrentAnalysisContext();
+  if (!ctx) {
+    alert('請先上傳 Excel 並完成分析。');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  const reportDate = document.getElementById('reportDate').value || '';
+  const summaryRows = [
+    ['項目', '數值', '說明'],
+    ['報表日期', reportDate, ''],
+    ['目前模式', ctx.title, ''],
+    ['執行中提案件數', ctx.execProposalCount, currentMode === 'all' ? '取自原始表頭' : '依目前篩選模式估算或手動覆寫'],
+    ['執行中涵蓋數', ctx.exec.size, ctx.shortLabel],
+    ['輔導中提案件數', ctx.counselProposalCount, currentMode === 'all' ? '取自原始表頭' : '依目前篩選模式估算或手動覆寫'],
+    ['輔導中涵蓋數', ctx.counsel.size, ctx.shortLabel],
+    ['執行中與輔導中重疊', ctx.overlap.size, ctx.shortLabel],
+    ['推動中不重複涵蓋數', ctx.covered.size, ctx.baseLabel],
+    ['母數', ctx.baseSet.size, ctx.baseLabel],
+    ['涵蓋率', pct(ctx.covered.size, ctx.baseSet.size), '推動中不重複涵蓋數 / 母數'],
+    ['尚未涵蓋數', ctx.missing.size, ctx.baseLabel],
+    ['全國鄉鎮市區涵蓋數', ctx.allCovered.size, `占 ${ALL_PAIR_SET.size} 鄉鎮市區，比例 ${pct(ctx.allCovered.size, ALL_PAIR_SET.size)}`],
+    ['優先推動地區涵蓋數', ctx.allPriorityCovered.size, `占 ${ctx.lists.priority.size} 處，比例 ${pct(ctx.allPriorityCovered.size, ctx.lists.priority.size)}`],
+    ['原民地區涵蓋數', ctx.allIndigCovered.size, `占 ${ctx.lists.indigenous.all.size} 處，比例 ${pct(ctx.allIndigCovered.size, ctx.lists.indigenous.all.size)}`]
+  ];
+  if (currentMode === 'indigenous') {
+    summaryRows.push(['山地原住民地區涵蓋數', ctx.coveredMountain, `占 ${ctx.indigenousMountain.size} 處，比例 ${pct(ctx.coveredMountain, ctx.indigenousMountain.size)}`]);
+    summaryRows.push(['平地原住民地區涵蓋數', ctx.coveredPlain, `占 ${ctx.indigenousPlain.size} 處，比例 ${pct(ctx.coveredPlain, ctx.indigenousPlain.size)}`]);
+  }
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+  setSheetWidths(wsSummary, [24, 22, 56]);
+  XLSX.utils.book_append_sheet(wb, wsSummary, '摘要');
+
+  const wsExec = aoaToSheetWithTitle(`執行中（${ctx.execProposalCount}件提案，涵蓋${ctx.exec.size}個${ctx.shortLabel}）`, `目前模式：${ctx.title}｜日期：${reportDate}`, buildCountyCardAOA(ctx.exec, 4));
+  XLSX.utils.book_append_sheet(wb, wsExec, '執行中表格');
+
+  const wsCounsel = aoaToSheetWithTitle(`輔導中（${ctx.counselProposalCount}件提案，涵蓋${ctx.counsel.size}個${ctx.shortLabel}）`, `目前模式：${ctx.title}｜日期：${reportDate}`, buildCountyCardAOA(ctx.counsel, 3));
+  XLSX.utils.book_append_sheet(wb, wsCounsel, '輔導中表格');
+
+  const missingRows = [['縣市', '鄉鎮市區'], ...[...ctx.missing].map(key => { const p = splitKey(key); return [p.county, p.town]; })];
+  const wsMissing = XLSX.utils.aoa_to_sheet(missingRows);
+  setSheetWidths(wsMissing, [16, 16]);
+  XLSX.utils.book_append_sheet(wb, wsMissing, '尚未涵蓋');
+
+  const detailRows = [['狀態', '縣市', '鄉鎮市區', '是否優先推動地區', '原民地區類型', '來源儲存格文字'], ...makeDetailRows(ctx.exec, '執行中', ctx.lists), ...makeDetailRows(ctx.counsel, '輔導中', ctx.lists)];
+  const wsDetail = XLSX.utils.aoa_to_sheet(detailRows);
+  setSheetWidths(wsDetail, [12, 14, 16, 18, 18, 70]);
+  XLSX.utils.book_append_sheet(wb, wsDetail, '明細資料');
+
+  const fileName = `${ctx.title}_${reportDate || '未填日期'}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
+
+async function exportAsPng(copyToClipboard = false) {
+  const node = document.getElementById('slide');
+  if (!window.html2canvas) {
+    alert('html2canvas 套件尚未載入，請確認網路可連到 CDN 後重新整理。');
+    return;
+  }
+  const canvas = await html2canvas(node, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
+  if (copyToClipboard && navigator.clipboard && window.ClipboardItem) {
+    canvas.toBlob(async blob => {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        alert('已複製成圖片，可直接到 PowerPoint 貼上。');
+      } catch (err) {
+        alert('瀏覽器未允許複製圖片，已改為下載 PNG。');
+        downloadCanvas(canvas);
+      }
+    }, 'image/png');
+  } else {
+    downloadCanvas(canvas);
+  }
+}
+
+function downloadCanvas(canvas) {
+  const a = document.createElement('a');
+  a.download = `${document.getElementById('mainTitle').textContent || 'dashboard'}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+function init() {
+  document.getElementById('priorityText').value = DEFAULT_PRIORITY_TEXT;
+  document.getElementById('indigenousText').value = DEFAULT_INDIGENOUS_TEXT;
+  document.getElementById('fileInput').addEventListener('change', e => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+  });
+  document.getElementById('reanalyzeBtn').addEventListener('click', () => {
+    if (workbookRows && workbookSheet) {
+      parsed = analyzeRows(workbookRows, workbookSheet);
+      renderDashboard();
+    } else {
+      alert('請先上傳 Excel。');
+    }
+  });
+  document.getElementById('copyPngBtn').addEventListener('click', () => exportAsPng(true));
+  document.getElementById('downloadPngBtn').addEventListener('click', () => exportAsPng(false));
+  document.getElementById('downloadExcelBtn').addEventListener('click', exportAsExcel);
+  document.getElementById('reportDate').addEventListener('input', renderDashboard);
+  document.getElementById('filteredExecOverride').addEventListener('input', renderDashboard);
+  document.getElementById('filteredCounselOverride').addEventListener('input', renderDashboard);
+  document.querySelectorAll('.mode-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMode = btn.dataset.mode;
+      renderDashboard();
+    });
+  });
+  window.addEventListener('resize', scaleStage);
+  scaleStage();
+}
+init();
+</script>
+</body>
+</html>
