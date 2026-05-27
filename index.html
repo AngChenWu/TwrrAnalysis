@@ -823,6 +823,113 @@ function extractPairsFromText(value, defaultCounty = null) {
   return out;
 }
 
+function splitTopLevelByDelimiter(text, delimiter = '、') {
+  const parts = [];
+  let buf = '';
+  let depth = 0;
+  const s = displayText(text).replace(/
+/g, '');
+  for (const ch of s) {
+    if (ch === '(' || ch === '（') {
+      depth++;
+      buf += ch;
+      continue;
+    }
+    if (ch === ')' || ch === '）') {
+      depth = Math.max(0, depth - 1);
+      buf += ch;
+      continue;
+    }
+    if (ch === delimiter && depth === 0) {
+      if (buf.trim()) parts.push(buf.trim());
+      buf = '';
+    } else {
+      buf += ch;
+    }
+  }
+  if (buf.trim()) parts.push(buf.trim());
+  return parts;
+}
+
+function extractTopLevelParentheses(text) {
+  const groups = [];
+  let buf = '';
+  let depth = 0;
+  const s = displayText(text);
+  for (const ch of s) {
+    if (ch === '(' || ch === '（') {
+      if (depth > 0) buf += ch;
+      depth++;
+      continue;
+    }
+    if (ch === ')' || ch === '）') {
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) {
+        if (buf.trim()) groups.push(buf.trim());
+        buf = '';
+      } else {
+        buf += ch;
+      }
+      continue;
+    }
+    if (depth > 0) buf += ch;
+  }
+  return groups;
+}
+
+function stripTopLevelParentheses(text) {
+  let out = '';
+  let depth = 0;
+  const s = displayText(text);
+  for (const ch of s) {
+    if (ch === '(' || ch === '（') { depth++; continue; }
+    if (ch === ')' || ch === '）') { depth = Math.max(0, depth - 1); continue; }
+    if (depth === 0) out += ch;
+  }
+  return out.trim();
+}
+
+function isPureTownSegment(segment, defaultCounty = null) {
+  const clean = normalizeText(segment).replace(/[0-9０-９\.．]+/g, '');
+  if (!TOWN_TO_COUNTIES.has(clean)) return false;
+  if (!defaultCounty) return TOWN_TO_COUNTIES.get(clean).length === 1;
+  return COUNTY_TOWNS[defaultCounty]?.includes(clean);
+}
+
+function parseProposalSegments(cellText, defaultCounty = null) {
+  const segments = splitTopLevelByDelimiter(cellText);
+  const units = [];
+  for (const segment of segments) {
+    const parenGroups = extractTopLevelParentheses(segment);
+    let proposalName = '';
+    let coverageText = '';
+    if (parenGroups.length) {
+      proposalName = stripTopLevelParentheses(segment).replace(/[、，,]+$/g, '').trim();
+      coverageText = parenGroups.join('、');
+    } else {
+      const cleanName = displayText(segment).trim();
+      if (isPureTownSegment(cleanName, defaultCounty)) {
+        const town = normalizeText(cleanName).replace(/[0-9０-９\.．]+/g, '');
+        proposalName = `${town}地方創生計畫`;
+        coverageText = town;
+      } else {
+        proposalName = cleanName || '未命名提案';
+        coverageText = cleanName;
+      }
+    }
+    const pairs = extractPairsFromText(coverageText, defaultCounty);
+    if (pairs.size) {
+      units.push({
+        proposalName: proposalName || segment,
+        segmentText: displayText(segment),
+        coverageText: displayText(coverageText),
+        pairs
+      });
+    }
+  }
+  return units;
+}
+
 function getCellText(rows, r, c) {
   return displayText(rows?.[r]?.[c] ?? '');
 }
@@ -877,13 +984,23 @@ function analyzeRows(rows, sheet) {
       if (!status) continue;
       const text = row[c];
       if (!displayText(text)) continue;
-      const pairs = extractPairsFromText(text, defaultCounty);
-      if (pairs.size) proposalUnits[status].push({ row: r, col: c, text: displayText(text), pairs });
-      for (const key of pairs) {
-        const target = status === 'executing' ? executing : counseling;
-        target.add(key);
-        if (!sourceMap[status].has(key)) sourceMap[status].set(key, []);
-        sourceMap[status].get(key).push(displayText(text).slice(0, 80));
+      const units = parseProposalSegments(text, defaultCounty);
+      for (const unit of units) {
+        proposalUnits[status].push({
+          row: r,
+          col: c,
+          text: displayText(text),
+          proposalName: unit.proposalName,
+          segmentText: unit.segmentText,
+          coverageText: unit.coverageText,
+          pairs: unit.pairs
+        });
+        for (const key of unit.pairs) {
+          const target = status === 'executing' ? executing : counseling;
+          target.add(key);
+          if (!sourceMap[status].has(key)) sourceMap[status].set(key, []);
+          sourceMap[status].get(key).push(unit.proposalName || displayText(text).slice(0, 80));
+        }
       }
     }
   }
@@ -956,7 +1073,7 @@ function countProposalUnits(status, baseSet) {
   const seen = new Set();
   for (const unit of parsed.proposalUnits[status]) {
     const hit = [...unit.pairs].some(k => baseSet.has(k));
-    if (hit) seen.add(`${unit.row}|${unit.col}|${unit.text}`);
+    if (hit) seen.add(`${unit.row}|${unit.col}|${unit.proposalName || unit.text}|${unit.segmentText || ''}`);
   }
   return seen.size;
 }
@@ -1186,12 +1303,12 @@ function pairListText(keys) {
 }
 
 function buildProposalMasterRows(lists) {
-  const rows = [['序號', '狀態', 'Excel位置', '提案名稱／原始文字', '涵蓋鄉鎮數', '涵蓋鄉鎮', '是否包含優先推動地區', '優先推動地區數', '優先推動地區', '是否包含原民地區', '原民地區數', '原民地區', '山地原住民地區數', '山地原住民地區', '平地原住民地區數', '平地原住民地區']];
+  const rows = [['序號', '狀態', 'Excel位置', '提案名稱', '原始切分文字', '括弧／涵蓋鄉鎮文字', '原始儲存格文字', '涵蓋鄉鎮數', '涵蓋鄉鎮', '是否包含優先推動地區', '優先推動地區數', '優先推動地區', '是否包含原民地區', '原民地區數', '原民地區', '山地原住民地區數', '山地原住民地區', '平地原住民地區數', '平地原住民地區']];
   if (!parsed?.proposalUnits) return rows;
   const units = [
     ...(parsed.proposalUnits.executing || []).map(u => ({ ...u, statusLabel: '執行中' })),
     ...(parsed.proposalUnits.counseling || []).map(u => ({ ...u, statusLabel: '輔導中' }))
-  ].sort((a,b) => a.row - b.row || a.col - b.col || a.text.localeCompare(b.text, 'zh-Hant'));
+  ].sort((a,b) => a.row - b.row || a.col - b.col || (a.proposalName || a.text).localeCompare((b.proposalName || b.text), 'zh-Hant')); 
 
   units.forEach((unit, index) => {
     const pairSet = new Set(unit.pairs || []);
@@ -1203,6 +1320,9 @@ function buildProposalMasterRows(lists) {
       index + 1,
       unit.statusLabel,
       `${columnLetter(unit.col)}${unit.row + 1}`,
+      unit.proposalName || unit.text,
+      unit.segmentText || unit.text,
+      unit.coverageText || pairListText(pairSet),
       unit.text,
       pairSet.size,
       pairListText(pairSet),
@@ -1271,7 +1391,7 @@ function exportAsExcel() {
 
   const proposalMasterRows = buildProposalMasterRows(ctx.lists);
   const wsProposalMaster = XLSX.utils.aoa_to_sheet(proposalMasterRows);
-  setSheetWidths(wsProposalMaster, [8, 12, 12, 55, 12, 70, 18, 16, 55, 16, 14, 55, 18, 45, 18, 45]);
+  setSheetWidths(wsProposalMaster, [8, 12, 12, 36, 42, 42, 70, 12, 70, 18, 16, 55, 16, 14, 55, 18, 45, 18, 45]);
   XLSX.utils.book_append_sheet(wb, wsProposalMaster, '提案總表');
 
   const wsExec = aoaToSheetWithTitle(`執行中（${ctx.execProposalCount}件提案，涵蓋${ctx.exec.size}個${ctx.shortLabel}）`, `目前模式：${ctx.title}｜日期：${reportDate}`, buildCountyCardAOA(ctx.exec, 4));
