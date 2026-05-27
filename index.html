@@ -1159,6 +1159,68 @@ function makeDetailRows(set, statusLabel, lists) {
   }).sort((a,b) => COUNTY_ORDER.indexOf(a[1]) - COUNTY_ORDER.indexOf(b[1]) || (COUNTY_TOWNS[a[1]] || []).indexOf(a[2]) - (COUNTY_TOWNS[b[1]] || []).indexOf(b[2]));
 }
 
+function columnLetter(colIndexZeroBased) {
+  let n = colIndexZeroBased + 1;
+  let s = '';
+  while (n > 0) {
+    const m = (n - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
+function sortPairKeys(keys) {
+  return [...keys].sort((ka, kb) => {
+    const a = splitKey(ka);
+    const b = splitKey(kb);
+    return COUNTY_ORDER.indexOf(a.county) - COUNTY_ORDER.indexOf(b.county) || (COUNTY_TOWNS[a.county] || []).indexOf(a.town) - (COUNTY_TOWNS[b.county] || []).indexOf(b.town);
+  });
+}
+
+function pairListText(keys) {
+  return sortPairKeys(keys).map(key => {
+    const { county, town } = splitKey(key);
+    return `${county}${town}`;
+  }).join('、');
+}
+
+function buildProposalMasterRows(lists) {
+  const rows = [['序號', '狀態', 'Excel位置', '提案名稱／原始文字', '涵蓋鄉鎮數', '涵蓋鄉鎮', '是否包含優先推動地區', '優先推動地區數', '優先推動地區', '是否包含原民地區', '原民地區數', '原民地區', '山地原住民地區數', '山地原住民地區', '平地原住民地區數', '平地原住民地區']];
+  if (!parsed?.proposalUnits) return rows;
+  const units = [
+    ...(parsed.proposalUnits.executing || []).map(u => ({ ...u, statusLabel: '執行中' })),
+    ...(parsed.proposalUnits.counseling || []).map(u => ({ ...u, statusLabel: '輔導中' }))
+  ].sort((a,b) => a.row - b.row || a.col - b.col || a.text.localeCompare(b.text, 'zh-Hant'));
+
+  units.forEach((unit, index) => {
+    const pairSet = new Set(unit.pairs || []);
+    const prioritySet = inter(pairSet, lists.priority);
+    const indigSet = inter(pairSet, lists.indigenous.all);
+    const mountainSet = new Set([...indigSet].filter(k => lists.indigenous.type.get(k) === 'mountain'));
+    const plainSet = new Set([...indigSet].filter(k => lists.indigenous.type.get(k) === 'plain'));
+    rows.push([
+      index + 1,
+      unit.statusLabel,
+      `${columnLetter(unit.col)}${unit.row + 1}`,
+      unit.text,
+      pairSet.size,
+      pairListText(pairSet),
+      prioritySet.size > 0 ? '是' : '否',
+      prioritySet.size,
+      pairListText(prioritySet),
+      indigSet.size > 0 ? '是' : '否',
+      indigSet.size,
+      pairListText(indigSet),
+      mountainSet.size,
+      pairListText(mountainSet),
+      plainSet.size,
+      pairListText(plainSet)
+    ]);
+  });
+  return rows;
+}
+
 function setSheetWidths(ws, widths) {
   ws['!cols'] = widths.map(w => ({ wch: w }));
 }
@@ -1206,6 +1268,11 @@ function exportAsExcel() {
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
   setSheetWidths(wsSummary, [24, 22, 56]);
   XLSX.utils.book_append_sheet(wb, wsSummary, '摘要');
+
+  const proposalMasterRows = buildProposalMasterRows(ctx.lists);
+  const wsProposalMaster = XLSX.utils.aoa_to_sheet(proposalMasterRows);
+  setSheetWidths(wsProposalMaster, [8, 12, 12, 55, 12, 70, 18, 16, 55, 16, 14, 55, 18, 45, 18, 45]);
+  XLSX.utils.book_append_sheet(wb, wsProposalMaster, '提案總表');
 
   const wsExec = aoaToSheetWithTitle(`執行中（${ctx.execProposalCount}件提案，涵蓋${ctx.exec.size}個${ctx.shortLabel}）`, `目前模式：${ctx.title}｜日期：${reportDate}`, buildCountyCardAOA(ctx.exec, 4));
   XLSX.utils.book_append_sheet(wb, wsExec, '執行中表格');
