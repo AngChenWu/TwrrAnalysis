@@ -827,8 +827,7 @@ function splitTopLevelByDelimiter(text, delimiter = '、') {
   const parts = [];
   let buf = '';
   let depth = 0;
-  const s = displayText(text).replace(/
-/g, '');
+  const s = displayText(text).split(String.fromCharCode(10)).join('').split(String.fromCharCode(13)).join('');
   for (const ch of s) {
     if (ch === '(' || ch === '（') {
       depth++;
